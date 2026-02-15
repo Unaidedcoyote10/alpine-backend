@@ -53,7 +53,23 @@ def extract_make_model(title):
 
 def parse_craigslist_feed(feed_url):
     """Parse Craigslist RSS feed and return structured listings"""
-    feed = feedparser.parse(feed_url)
+    # Add headers to avoid being blocked by Craigslist
+    import urllib.request
+    
+    # Create request with user-agent header
+    req = urllib.request.Request(
+        feed_url,
+        headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+    )
+    
+    # Parse the feed with custom headers
+    feed = feedparser.parse(req)
+    
+    print(f"Feed URL: {feed_url}")
+    print(f"Feed entries found: {len(feed.entries)}")
+    
     listings = []
     
     for entry in feed.entries:
@@ -167,15 +183,22 @@ def get_listings():
     
     print(f"Fetching from {len(feed_urls)} Craigslist areas in OR/WA...")
     
+    successful_feeds = 0
+    failed_feeds = 0
+    
     for feed_url in feed_urls:
         try:
             listings = parse_craigslist_feed(feed_url)
-            all_listings.extend(listings)
-            print(f"Fetched {len(listings)} listings from {feed_url}")
+            if listings:
+                all_listings.extend(listings)
+                successful_feeds += 1
+            print(f"✅ Fetched {len(listings)} listings from {feed_url}")
         except Exception as e:
-            print(f"Error parsing feed {feed_url}: {e}")
+            failed_feeds += 1
+            print(f"❌ Error parsing feed {feed_url}: {e}")
             continue
     
+    print(f"Total feeds: {len(feed_urls)}, Successful: {successful_feeds}, Failed: {failed_feeds}")
     print(f"Total listings before dedup: {len(all_listings)}")
     
     # Remove duplicates based on link (more reliable than title)
